@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unggah File dengan Pratinjau</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <nav>
+            <a href="index.html" class="active">Unggah File</a>
+            <a href="list.php">Daftar File</a>
+        </nav>
+
+        <div class="card">
+            <h2>Unggah File Baru</h2>
+            <p>Pilih file (gambar, PDF, atau Word) untuk melihat pratinjau sebelum mengunggah.</p>
+            
+            <form id="upload-form" action="upload.php" method="post" enctype="multipart/form-data">
+                
+                <div id="drop-area" class="file-input-wrapper">
+                    <input type="file" name="fileToUpload" id="fileToUpload" required>
+                    <div class="file-input-content">
+                        <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p class="upload-text"><b>Seret & lepas file di sini</b>, atau klik untuk memilih.</p>
+                        <span id="file-name" class="file-name-display"></span>
+                    </div>
+                </div>
+
+                <div id="preview-area" class="preview-area" style="display: none;">
+                    </div>
+
+                <input type="submit" value="Unggah File Sekarang" name="submit" class="button">
+            </form>
+        </div>
+    </div>
+
+<script>
+const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('fileToUpload');
+const previewArea = document.getElementById('preview-area');
+const fileNameDisplay = document.getElementById('file-name');
+const uploadText = document.querySelector('.upload-text');
+
+// Mencegah perilaku default browser
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+// Menambahkan highlight saat file diseret ke area
+['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'), false);
+});
+
+// Menangani file yang di-drop
+dropArea.addEventListener('drop', handleDrop, false);
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files; // Sinkronkan file dari drop ke input
+    handleFiles(files);
+}
+
+// Menangani file yang dipilih lewat klik
+fileInput.addEventListener('change', function() {
+    handleFiles(this.files);
+});
+
+function handleFiles(files) {
+    if (files.length === 0) {
+        fileNameDisplay.textContent = '';
+        uploadText.style.display = 'block';
+        previewArea.style.display = 'none';
+        previewArea.innerHTML = '';
+        return;
+    }
+    
+    const file = files[0];
+    
+    // Sembunyikan teks upload awal, tampilkan nama file
+    uploadText.style.display = 'none';
+    fileNameDisplay.textContent = `File terpilih: ${file.name}`;
+
+    // Tampilkan area pratinjau
+    previewArea.style.display = 'flex';
+    previewArea.innerHTML = ''; // Kosongkan pratinjau sebelumnya
+
+    const fileType = file.type;
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    const fileSize = file.size;
+
+    if (fileSize > 5000000) { // Batas 5MB
+        previewArea.innerHTML = `<p class="error">Ukuran file terlalu besar (Maks: 5MB).</p>`;
+        fileInput.value = ''; // Reset input file
+        fileNameDisplay.textContent = '';
+        uploadText.style.display = 'block';
+        return;
+    }
+
+    if (fileType.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.alt = "Pratinjau Gambar";
+            previewArea.appendChild(img);
+        }
+        reader.readAsDataURL(file);
+    } else if (fileType === 'application/pdf') {
+        const object = document.createElement('object');
+        object.data = URL.createObjectURL(file);
+        object.type = 'application/pdf';
+        object.width = '100%';
+        object.height = '400px';
+        
+        const fallback = document.createElement('p');
+        fallback.innerHTML = 'Browser Anda tidak mendukung pratinjau PDF. Anda dapat <a href="'+object.data+'" target="_blank">mengunduhnya di sini</a>.';
+        object.appendChild(fallback);
+
+        previewArea.appendChild(object);
+    } else if (['doc', 'docx'].includes(fileExtension)) {
+        previewArea.innerHTML = `
+            <div class="file-icon-preview">
+                <img src="https://img.icons8.com/color/96/000000/microsoft-word-2019--v1.png" alt="Word Icon"/>
+                <p>Pratinjau untuk file Word tidak tersedia.</p>
+            </div>
+        `;
+    } else {
+        previewArea.innerHTML = '<p class="error">Format file tidak didukung untuk pratinjau.</p>';
+    }
+}
+</script>
+
+</body>
+</html>
